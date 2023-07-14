@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Cesium 3D Tiles Viewer</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.85/Build/Cesium/Cesium.js"></script>
+    <style>
+        @import url(https://cesium.com/downloads/cesiumjs/releases/1.85/Build/Cesium/Widgets/widgets.css);
+
+        #cesiumContainer {
+            width: 100%;
+            height: 500px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #tilesetList {
+            list-style-type: none;
+            padding: 0;
+            max-height: 200px;
+            overflow: auto;
+        }
+
+        .tilesetItem {
+            margin: 5px 0;
+        }
+
+        .tilesetCheckbox {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <label for="tilesetLink">Enter Tileset URL:</label>
+    <input type="text" id="tilesetLink">
+    <br>
+    <select id="baseLayer">
+        <option value="GoogleSatellite">Google Satellite</option>
+        <option value="GoogleHybrid">Google Hybrid</option>
+        <option value="GoogleStreet">Google Street</option>
+        <option value="EsriSatellite">Esri Satellite</option>
+    </select>
+    <br>
+    <button onclick="loadTileset()">Load Tileset</button>
+
+    <h3>Tileset List</h3>
+    <ul id="tilesetList"></ul>
+
+    <script>
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            sceneMode: Cesium.SceneMode.SCENE3D,
+            navigationInstructionsInitiallyVisible: false,
+            animation: false,
+            timeline: false,
+            baseLayerPicker: false,
+            geocoder: false,
+            homeButton: false,
+            infoBox: false,
+            selectionIndicator: false,
+            fullscreenButton: false,
+            vrButton: false,
+            navigationHelpButton: false,
+            navigationInstructionsInitiallyVisible: false,
+            creditContainer: document.createElement('div'),
+            imageryProvider: getCesiumImageryProvider("GoogleSatellite")
+        });
+
+        var tilesetList = document.getElementById("tilesetList");
+
+        var tilesets = [];
+
+        function loadTileset() {
+            var linkInput = document.getElementById("tilesetLink").value;
+
+            if (linkInput) {
+                loadTilesetFromUrl(linkInput);
+            } else {
+                console.log("Please enter a tileset URL.");
+            }
+        }
+
+        function loadTilesetFromUrl(tilesetUrl) {
+            var tileset = new Cesium.Cesium3DTileset({
+                url: tilesetUrl,
+                maximumScreenSpaceError: 16
+            });
+
+            var listItem = document.createElement("li");
+            listItem.className = "tilesetItem";
+
+            var checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "tilesetCheckbox";
+            checkbox.checked = true;
+            checkbox.addEventListener("change", function() {
+                tileset.show = this.checked;
+            });
+
+            var zoomButton = document.createElement("button");
+            zoomButton.innerHTML = "Zoom";
+            zoomButton.addEventListener("click", function() {
+                viewer.zoomTo(tileset);
+            });
+
+            var resolutionSlider = document.createElement("input");
+            resolutionSlider.type = "range";
+            resolutionSlider.min = 1;
+            resolutionSlider.max = 16;
+            resolutionSlider.value = 16;
+            resolutionSlider.addEventListener("input", function() {
+                tileset.maximumScreenSpaceError = parseInt(this.value);
+            });
+
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(tilesetUrl));
+            listItem.appendChild(zoomButton);
+            listItem.appendChild(resolutionSlider);
+
+            tilesetList.appendChild(listItem);
+
+            tilesets.push(tileset);
+            viewer.scene.primitives.add(tileset);
+        }
+
+        function getCesiumImageryProvider(baseLayer) {
+            switch (baseLayer) {
+                case "GoogleSatellite":
+                    return new Cesium.UrlTemplateImageryProvider({
+                        url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+                        credit: "Google Satellite"
+                    });
+                case "GoogleHybrid":
+                    return new Cesium.UrlTemplateImageryProvider({
+                        url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+                        credit: "Google Hybrid"
+                    });
+                case "GoogleStreet":
+                    return new Cesium.UrlTemplateImageryProvider({
+                        url: "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+                        credit: "Google Street"
+                    });
+                case "EsriSatellite":
+                    return new Cesium.ArcGisMapServerImageryProvider({
+                        url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+                    });
+                default:
+                    return null;
+            }
+        }
+
+        document.getElementById("baseLayer").addEventListener("change", function() {
+            var selectedBaseLayer = this.value;
+            viewer.imageryLayers.removeAll();
+            viewer.imageryLayers.addImageryProvider(getCesiumImageryProvider(selectedBaseLayer));
+        });
+
+    </script>
+</body>
+</html>
